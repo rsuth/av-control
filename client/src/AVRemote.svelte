@@ -5,6 +5,9 @@
     import Settings from "./Settings.svelte";
 
     let showSettingsModal = false;
+    let projector_ip = "";
+    let switcher_ip = "";
+    let switcher_2_ip = "";
 
     let inputs = [
         {
@@ -27,6 +30,19 @@
     let selectedInput = inputs[0];
     let videoMuted = false;
 
+    function debounce_leading(func, timeout = 500) {
+        let timer;
+        return (...args) => {
+            if (!timer) {
+                func.apply(this, args);
+            }
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+                timer = undefined;
+            }, timeout);
+        };
+    }
+
     function toggleVideoMute() {
         let command = videoMuted ? "blankoff" : "blankon";
         videoMuted = !videoMuted;
@@ -40,7 +56,9 @@
     }
 
     function switchInputs(input) {
+        console.log(input);
         selectedInput = input;
+
         fetch("/c/v" + input.value)
             .then((res) => {
                 console.log(res);
@@ -49,6 +67,23 @@
                 console.log(err);
             });
     }
+
+    function getInfo() {
+        fetch("/c/info")
+            .then((res) => {
+                return res.json();
+            })
+            .then((data) => {
+                projector_ip = data.projector_ip;
+                switcher_ip = data.switcher_ip;
+                switcher_2_ip = data.switcher_2_ip;
+            })
+            .catch((err) => {
+                console.log(err);
+            });
+    }
+
+    getInfo();
 </script>
 
 <div class="remote-container">
@@ -63,6 +98,18 @@
                 </label>
             </div>
         {/each}
+        <h4>Network Info</h4>
+        <div>
+            <p>
+                Switcher IP Address: {switcher_ip}
+            </p>
+            <p>
+                Projector IP Address: {projector_ip}
+            </p>
+            <p>
+                Switcher 2 IP Address: {switcher_2_ip}
+            </p>
+        </div>
     </Settings>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <div
@@ -82,7 +129,9 @@
             {#each inputs as input}
                 <button
                     class="button {selectedInput === input ? 'active' : ''}"
-                    on:click={() => switchInputs(input)}
+                    on:click={debounce_leading(() => {
+                        switchInputs(input);
+                    })}
                 >
                     {input.name}
                 </button>
@@ -92,7 +141,7 @@
         <div class="control-section">
             <button
                 class="show-btn button {!videoMuted ? 'show-active' : ''}"
-                on:click={toggleVideoMute}
+                on:click={debounce_leading(() => toggleVideoMute())}
             >
                 {#if videoMuted}
                     <img src="hide.png" height="50px" alt="hide icon" /><br />
@@ -127,20 +176,20 @@
     .logo {
         text-align: center;
         font-size: 2rem;
-        margin-bottom: 50px;
+        margin-bottom: 25px;
     }
 
     .remote {
         display: grid;
         grid-template-rows: auto auto;
-        gap: 2rem;
+        gap: 1rem;
         width: 100%;
     }
 
     .inputs-section {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
+        gap: 0.5rem;
     }
 
     .control-section {

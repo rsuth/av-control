@@ -1,13 +1,15 @@
 import socket
 import requests
 import re
-from flask import Flask, current_app, jsonify, send_from_directory
+from flask import Flask, current_app, jsonify, send_from_directory, request
 
 # Kramer switcher URL
-KRAMER_HOST_URL = "http://192.168.0.39/aj.shtml?a=SCAFUN&i=0&f=0&v="
+switcher_ip = "192.168.1.39"
+
+switcher_2_ip = "192.168.1.40"
 
 # IP address of the Sony projector
-PROJECTOR_IP = "192.168.0.46"
+projector_ip = "192.168.1.6"
 
 # PORT of the Sony projector
 PROJECTOR_PORT = 53595
@@ -42,14 +44,21 @@ class ProjectorController:
 
 
 def switchKramerInput(input):
-    url = KRAMER_HOST_URL + str(input)
+    url = "http://" + switcher_ip + "/aj.shtml?a=SCAFUN&i=0&f=0&v=" + str(input)
     print("Sending command to switcher: " + url)
     if input >= 0 and input < 6:
         requests.get(url)
 
 
+def switchKramer2Input(input):
+    url = "http://" + switcher_2_ip + "/aj.shtml?a=SCAFUN&i=0&f=0&v=" + str(input)
+    print("Sending command to switcher 2: " + url)
+    if input >= 0 and input < 6:
+        requests.get(url)
+
+
 def sendProjectorCommand(command):
-    p = ProjectorController(PROJECTOR_IP, PROJECTOR_PORT)
+    p = ProjectorController(projector_ip, PROJECTOR_PORT)
     print('Sending to projector: "' + command.strip() + '"')
     try:
         res = p.send_command(command)
@@ -75,8 +84,9 @@ def home(path):
     return send_from_directory("client/public", path)
 
 
-@app.route("/c/<command>")
+@app.route("/c/<command>", methods=["GET", "POST"])
 def handle_command(command):
+    print("Received command: " + command)
     try:
         match = re.match(r"v(\d+)", command)
         if match:
@@ -86,13 +96,18 @@ def handle_command(command):
             else:
                 print("Invalid input number")
         elif command == "blankon":
-            sendProjectorCommand(commands["BLANK_ON"])
+            # sendProjectorCommand(commands["BLANK_ON"])
+            switchKramer2Input(1)
         elif command == "blankoff":
-            sendProjectorCommand(commands["BLANK_OFF"])
-        elif command == "poweron":
-            sendProjectorCommand(commands["POWER_ON"])
-        elif command == "poweroff":
-            sendProjectorCommand(commands["POWER_OFF"])
+            switchKramer2Input(0)
+        elif command == "info":
+            return jsonify(
+                {
+                    "projector_ip": projector_ip,
+                    "switcher_ip": switcher_ip,
+                    "switcher_2_ip": switcher_2_ip,
+                }
+            )
         else:
             print("Unknown command: " + command)
             return jsonify({"status": "error: unknown command"})
