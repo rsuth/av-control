@@ -31,11 +31,17 @@ WantedBy=multi-user.target
 
 Then:
 
+```
 sudo systemctl daemon-reload
 sudo systemctl enable yourapp.service
 sudo systemctl start yourapp.service
-check status:
+```
+
+Check status with:
+
+```
 sudo systemctl status yourapp.service
+```
 
 Configure the tablet to point to the server @ port 5000.
 
